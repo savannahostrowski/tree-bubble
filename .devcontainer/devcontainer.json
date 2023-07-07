@@ -1,0 +1,17 @@
+{
+	"name": "Tree Bubble",
+	"build": {
+		"dockerfile": "Dockerfile",
+		"context": ".."
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"golang.go",
+				"github.vscode-github-actions",
+				"ms-azuretools.vscode-docker",
+				"github.copilot"
+			]
+		}
+	}
+}
