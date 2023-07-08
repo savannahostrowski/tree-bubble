@@ -1,12 +1,8 @@
 package tree
 
 import (
-	"fmt"
 	"io"
-	"strings"
-	"unicode"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -27,18 +23,21 @@ type Styles struct {
 	Root   lipgloss.Style
 }
 
-func DefaultStyles() Styles {
+func defaultStyles() Styles {
 	return Styles{
 		Shapes: lipgloss.NewStyle().Foreground(lipgloss.Color("69")),
-		Root:   lipgloss.NewStyle().Bold(true).Background(lipgloss.Color("69")),
+		Root:   lipgloss.NewStyle().Padding(0, 0, 1, 2).Bold(true).Background(lipgloss.Color("62")).Foreground(lipgloss.Color("230")),
 	}
 }
 
-type Item struct {
+
+type Node interface {
+	Children() []Node
 }
 
-type ItemDelegate interface {
-	Render(w io.Writer, m Model, index int, item Item) error
+
+type NodeDelegate interface {
+	Render(w io.Writer, m Model, index int, node Node) error
 
 	Height() int
 
@@ -48,32 +47,32 @@ type ItemDelegate interface {
 type Model struct {
 	Styles   Styles
 
-	delegate ItemDelegate
+	delegate NodeDelegate
 	width int
 	height int
-	items []Item
+	nodes []Node
 }
 
-func New(items []Item, delegate ItemDelegate, width int, height int) Model {
+func New(nodes []Node, delegate NodeDelegate, width int, height int) Model {
 	return Model{
 		delegate: delegate,
-		Styles:   DefaultStyles(),
+		Styles:   defaultStyles(),
 
 		width:  width,
 		height: height,
-		items: items,
+		nodes: nodes,
 	}
 }
 
-func (m Model) Items() []Item {
-	return m.items
+func (m Model) Nodes() []Node {
+	return m.nodes
 }
 
-func (m *Model) SetItems(items []Item) {
-	m.items = items
+func (m *Model) SetNodes(nodes []Node) {
+	m.nodes = nodes
 }
 
-func (m *Model) SetDelegate(delegate ItemDelegate) {
+func (m *Model) SetDelegate(delegate NodeDelegate) {
 	m.delegate = delegate
 }
 
@@ -86,7 +85,8 @@ func (m Model) Height() int {
 }
 
 func (m *Model) SetSize(width, height int) {
-	m.SetSize(width, height)
+	m.width = width
+	m.height = height
 }
 
 func (m *Model) SetWidth(newWidth int) {
@@ -98,10 +98,3 @@ func (m *Model) SetHeight(newHeight int) {
 }
 
 
-func (m Model) View() string {
-	var (
-		availableHeight = m.height
-	)
-
-	content := lipgloss.NewStyle().Height(availableHeight).Render(m.pop)
-}
