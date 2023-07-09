@@ -1,7 +1,6 @@
 package tree
 
 import (
-	"fmt"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -9,32 +8,36 @@ import (
 )
 
 const (
-	topLeft     string = "╭"
-	bottomLeft  string = "╰"
-	topRight    string = "╮"
-	bottomRight string = "╯"
-	bar         string = "|"
-	left        string = "├"
-	right       string = "┤"
+	bottomLeft string = " └──"
+)
+
+const (
+	white = lipgloss.Color("#ffffff")
+	black = lipgloss.Color("#000000")
+	purple  = lipgloss.Color("#bd93f9")
 )
 
 type Styles struct {
-	Shapes lipgloss.Style
-	Root   lipgloss.Style
-	Child  lipgloss.Style
+	Shapes     lipgloss.Style
+	RootValue  lipgloss.Style
+	RootDesc   lipgloss.Style
+	ChildValue lipgloss.Style
+	ChildDesc  lipgloss.Style
 }
 
 func defaultStyles() Styles {
 	return Styles{
-		Shapes: lipgloss.NewStyle().Foreground(lipgloss.Color("69")),
-		Root:   lipgloss.NewStyle().Padding(0, 0, 1, 2).Bold(true).Background(lipgloss.Color("62")).Foreground(lipgloss.Color("230")),
-		Child:  lipgloss.NewStyle().Padding(0, 0, 1, 2).Foreground(lipgloss.Color("230")),
+		Shapes:     lipgloss.NewStyle().Margin(0, 0, 0, 0).Foreground(purple),
+		RootValue:  lipgloss.NewStyle().Margin(0, 0, 0, 0).Background(purple),
+		RootDesc:   lipgloss.NewStyle().Margin(0, 0, 0, 0).Foreground(purple),
+		ChildDesc:  lipgloss.NewStyle().Margin(0, 0, 0, 0).Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#ffffff"}), 
+		ChildValue: lipgloss.NewStyle().Margin(0, 0, 0, 0).Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#ffffff"}),
 	}
 }
 
-type Node struct{
-	Value string
-	Desc string
+type Node struct {
+	Value    string
+	Desc     string
 	Children []Node
 }
 
@@ -99,31 +102,32 @@ func (m Model) View() string {
 	}
 
 	if len(nodes) > 0 {
-		m.renderTree(&b, m.nodes)
+		m.renderTree(&b, m.nodes, 0)
 	}
 	return b.String()
 }
 
-func (m *Model) renderTree(b *strings.Builder, remainingNodes []Node) string {
-	if len(m.nodes) == 0 {
-		return b.String()
-	}
+func (m *Model) renderTree(b *strings.Builder, remainingNodes []Node, indent int) string {
+	// Root Value - Root Description
+	// 	└── Child Value - Child Description
+	// 	└── Child Value - Child Description
+	//  └── Child Value -  Child Description
+	// 	└── Child Value - Child Description
+	// 	└── Child Value - Child Description
 
-	for i, node := range m.nodes {
-		if len(node.Children) > 0 {
-			m.renderTree(b, node.Children)
-			
-		} else {
-			if i == 0 {
-				fmt.Println(node.Value)
-				b.WriteString(m.Styles.Shapes.Render(topLeft) + node.Value)
-				b.WriteString(m.Styles.Root.Render("\n\t" + node.Desc))
-				b.WriteString(m.Styles.Root.Render(string(bar)))
-			} else {
-				b.WriteString(m.Styles.Shapes.Render(left))
-				b.WriteString(m.Styles.Root.Render("\n\t" + node.Desc))
-			}
+	for _, node := range remainingNodes {
+
+		if indent == 0 {
+			str := m.Styles.RootValue.Render(node.Value) + "\t\t" + m.Styles.RootDesc.Render(node.Desc) + "\n"
+			b.WriteString(str)
 		}
+		if node.Children != nil {
+			m.renderTree(b, node.Children, indent+1)
+		} else {
+			str := strings.Repeat(" ", indent*2) + m.Styles.Shapes.Render(bottomLeft) + m.Styles.ChildValue.Render(node.Value) + "\t\t" + m.Styles.ChildDesc.Render(node.Desc) + "\n"
+			b.WriteString(str)
+		}
+
 	}
 	return b.String()
 }

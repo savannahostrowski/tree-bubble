@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -17,7 +16,6 @@ var (
 func main() {
 	err := tea.NewProgram(initialModel()).Start()
 	if err != nil {
-		fmt.Println(os.Stderr, err)
 		os.Exit(1)
 	}
 }
