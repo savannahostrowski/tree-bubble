@@ -2,6 +2,7 @@ package tree
 
 import (
 	"io"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 )
@@ -21,41 +22,31 @@ const (
 type Styles struct {
 	Shapes lipgloss.Style
 	Root   lipgloss.Style
+	Child  lipgloss.Style
 }
 
 func defaultStyles() Styles {
 	return Styles{
 		Shapes: lipgloss.NewStyle().Foreground(lipgloss.Color("69")),
 		Root:   lipgloss.NewStyle().Padding(0, 0, 1, 2).Bold(true).Background(lipgloss.Color("62")).Foreground(lipgloss.Color("230")),
+		Child:  lipgloss.NewStyle().Padding(0, 0, 1, 2).Foreground(lipgloss.Color("230")),
 	}
 }
 
 
-type Node interface {
-	Children() []Node
-}
-
-
-type NodeDelegate interface {
-	Render(w io.Writer, m Model, index int, node Node) error
-
-	Height() int
-
-	Width() int
-}
+type Node interface {}
 
 type Model struct {
 	Styles   Styles
 
-	delegate NodeDelegate
+	// delegate NodeDelegate
 	width int
 	height int
 	nodes []Node
 }
 
-func New(nodes []Node, delegate NodeDelegate, width int, height int) Model {
+func New(nodes []Node,  width int, height int) Model {
 	return Model{
-		delegate: delegate,
 		Styles:   defaultStyles(),
 
 		width:  width,
@@ -72,9 +63,9 @@ func (m *Model) SetNodes(nodes []Node) {
 	m.nodes = nodes
 }
 
-func (m *Model) SetDelegate(delegate NodeDelegate) {
-	m.delegate = delegate
-}
+// func (m *Model) SetDelegate(delegate NodeDelegate) {
+// 	m.delegate = delegate
+// }
 
 func (m Model) Width() int {
 	return m.width
@@ -98,3 +89,13 @@ func (m *Model) SetHeight(newHeight int) {
 }
 
 
+// func (m Model) treeView() string {
+// 	nodes := m.Nodes()
+
+// 	var b strings.Builder
+
+// 	for i, node := range nodes {
+// 		m.delegate.Render(&b, m, i, node)
+// 	}
+	
+// }
