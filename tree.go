@@ -9,9 +9,7 @@ import (
 
 const (
 	bottomLeft string = " └──"
-)
-
-const (
+	
 	white = lipgloss.Color("#ffffff")
 	black = lipgloss.Color("#000000")
 	purple  = lipgloss.Color("#bd93f9")
