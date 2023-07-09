@@ -9,10 +9,10 @@ import (
 
 const (
 	bottomLeft string = " └──"
-	
-	white = lipgloss.Color("#ffffff")
-	black = lipgloss.Color("#000000")
-	purple  = lipgloss.Color("#bd93f9")
+
+	white  = lipgloss.Color("#ffffff")
+	black  = lipgloss.Color("#000000")
+	purple = lipgloss.Color("#bd93f9")
 )
 
 type Styles struct {
@@ -28,7 +28,7 @@ func defaultStyles() Styles {
 		Shapes:     lipgloss.NewStyle().Margin(0, 0, 0, 0).Foreground(purple),
 		RootValue:  lipgloss.NewStyle().Margin(0, 0, 0, 0).Background(purple),
 		RootDesc:   lipgloss.NewStyle().Margin(0, 0, 0, 0).Foreground(purple),
-		ChildDesc:  lipgloss.NewStyle().Margin(0, 0, 0, 0).Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#ffffff"}), 
+		ChildDesc:  lipgloss.NewStyle().Margin(0, 0, 0, 0).Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#ffffff"}),
 		ChildValue: lipgloss.NewStyle().Margin(0, 0, 0, 0).Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#ffffff"}),
 	}
 }
@@ -97,9 +97,7 @@ func (m Model) View() string {
 
 	if len(nodes) == 0 {
 		return "No data"
-	}
-
-	if len(nodes) > 0 {
+	} else {
 		m.renderTree(&b, m.nodes, 0)
 	}
 	return b.String()
@@ -110,8 +108,8 @@ func (m *Model) renderTree(b *strings.Builder, remainingNodes []Node, indent int
 	// 	└── Child Value - Child Description
 	// 	└── Child Value - Child Description
 	//  └── Child Value -  Child Description
-	// 	└── Child Value - Child Description
-	// 	└── Child Value - Child Description
+	// 		└── Child Value - Child Description
+	// 		└── Child Value - Child Description
 
 	for _, node := range remainingNodes {
 
