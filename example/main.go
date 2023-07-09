@@ -14,16 +14,6 @@ var (
 	styleDoc = lipgloss.NewStyle().Padding(1)
 )
 
-type node struct {
-	value    string
-	desc     string
-	children []tree.Node
-}
-
-func (n node) Value() string         { return n.value }
-func (n node) Description() string   { return n.desc }
-func (n node) Children() []tree.Node { return n.children }
-
 func main() {
 	err := tea.NewProgram(initialModel()).Start()
 	if err != nil {
@@ -41,18 +31,36 @@ func initialModel() model {
 	top, right, bottom, left := styleDoc.GetPadding()
 	w = w - left - right
 	h = h - top - bottom
-
-	t := tree.New([]tree.Node{
-		node{value: "history | grep docker", desc: "Used in a Unix-like operating system to search through the " +
-			"command history for any entries that contain the word 'docker.'", children: []tree.Node{
-			node{value: "history", desc: "Shows the history of all commands in the terminal", children: nil},
-			node{value: "|", desc: "Used to combine two or more commands", children: nil},
-			node{value: "grep", desc: "Short for 'global regular expression print'; A command used in searching and matching text files contained in the regular expressions.", children: nil},
-			node{value: "docker", desc: "Used to interact with Docker", children: nil},
+	nodes := []tree.Node{
+		{
+			Value: "history | grep docker",
+			Desc: "Used in a Unix-like operating system to search through the " +
+				"command history for any entries that contain the word 'docker.'",
+			Children: []tree.Node{
+				{
+				Value:    "history",
+				Desc:     "Shows the history of all commands in the terminal",
+				Children: nil,
+			}, 
+			{
+				Value:    "|",
+				Desc:     "Used to combine two or more commands",
+				Children: nil,
+			},
+		{
+				Value:    "grep",
+				Desc:     "Short for 'global regular expression print'; A command used in searching and matching text files contained in the regular expressions.",
+				Children: nil,
+			},
+{
+				Value:    "docker",
+				Desc:     "Used to interact with Docker",
+				Children: nil,
+			},
 		},
-		}}, w, h)
+	}};
 
-	return model{tree: t}
+	return model{tree: tree.New(nodes, w, h)}
 }
 
 type model struct {

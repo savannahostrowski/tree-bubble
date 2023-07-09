@@ -1,22 +1,21 @@
 package tree
 
 import (
-	"io"
+	"fmt"
 	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
-type Shape string
-
 const (
-	topLeft     Shape = "╭"
-	bottomLeft  Shape = "╰"
-	topRight    Shape = "╮"
-	bottomRight Shape = "╯"
-	bar         Shape = "|"
-	left        Shape = "├"
-	right       Shape = "┤"
+	topLeft     string = "╭"
+	bottomLeft  string = "╰"
+	topRight    string = "╮"
+	bottomRight string = "╯"
+	bar         string = "|"
+	left        string = "├"
+	right       string = "┤"
 )
 
 type Styles struct {
@@ -33,25 +32,27 @@ func defaultStyles() Styles {
 	}
 }
 
-
-type Node interface {}
-
-type Model struct {
-	Styles   Styles
-
-	// delegate NodeDelegate
-	width int
-	height int
-	nodes []Node
+type Node struct{
+	Value string
+	Desc string
+	Children []Node
 }
 
-func New(nodes []Node,  width int, height int) Model {
+type Model struct {
+	Styles Styles
+
+	width  int
+	height int
+	nodes  []Node
+}
+
+func New(nodes []Node, width int, height int) Model {
 	return Model{
-		Styles:   defaultStyles(),
+		Styles: defaultStyles(),
 
 		width:  width,
 		height: height,
-		nodes: nodes,
+		nodes:  nodes,
 	}
 }
 
@@ -62,10 +63,6 @@ func (m Model) Nodes() []Node {
 func (m *Model) SetNodes(nodes []Node) {
 	m.nodes = nodes
 }
-
-// func (m *Model) SetDelegate(delegate NodeDelegate) {
-// 	m.delegate = delegate
-// }
 
 func (m Model) Width() int {
 	return m.width
@@ -88,14 +85,45 @@ func (m *Model) SetHeight(newHeight int) {
 	m.SetSize(m.width, newHeight)
 }
 
+func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+	return m, nil
+}
 
-// func (m Model) treeView() string {
-// 	nodes := m.Nodes()
+func (m Model) View() string {
+	nodes := m.Nodes()
 
-// 	var b strings.Builder
+	var b strings.Builder
 
-// 	for i, node := range nodes {
-// 		m.delegate.Render(&b, m, i, node)
-// 	}
-	
-// }
+	if len(nodes) == 0 {
+		return "No data"
+	}
+
+	if len(nodes) > 0 {
+		m.renderTree(&b, m.nodes)
+	}
+	return b.String()
+}
+
+func (m *Model) renderTree(b *strings.Builder, remainingNodes []Node) string {
+	if len(m.nodes) == 0 {
+		return b.String()
+	}
+
+	for i, node := range m.nodes {
+		if len(node.Children) > 0 {
+			m.renderTree(b, node.Children)
+			
+		} else {
+			if i == 0 {
+				fmt.Println(node.Value)
+				b.WriteString(m.Styles.Shapes.Render(topLeft) + node.Value)
+				b.WriteString(m.Styles.Root.Render("\n\t" + node.Desc))
+				b.WriteString(m.Styles.Root.Render(string(bar)))
+			} else {
+				b.WriteString(m.Styles.Shapes.Render(left))
+				b.WriteString(m.Styles.Root.Render("\n\t" + node.Desc))
+			}
+		}
+	}
+	return b.String()
+}
