@@ -1,10 +1,12 @@
 package tree
 
 import (
+	"fmt"
 	"strings"
-	
-	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -22,6 +24,7 @@ type Styles struct {
 	RootDesc   lipgloss.Style
 	ChildValue lipgloss.Style
 	ChildDesc  lipgloss.Style
+	Help  lipgloss.Style
 }
 
 func defaultStyles() Styles {
@@ -31,6 +34,7 @@ func defaultStyles() Styles {
 		RootDesc:   lipgloss.NewStyle().Margin(0, 0, 0, 0).Foreground(purple),
 		ChildDesc:  lipgloss.NewStyle().Margin(0, 0, 0, 0).Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#ffffff"}),
 		ChildValue: lipgloss.NewStyle().Margin(0, 0, 0, 0).Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#ffffff"}),
+		Help: 	 lipgloss.NewStyle().Margin(0, 0, 0, 0).Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#ffffff"}),
 	}
 }
 
@@ -48,6 +52,11 @@ type Model struct {
 	height int
 	nodes  []Node
 	cursor int
+
+	Help     help.Model
+	showHelp bool
+
+	AdditionalShortHelpKeys func() []key.Binding
 }
 
 func New(nodes []Node, width int, height int) Model {
@@ -58,6 +67,9 @@ func New(nodes []Node, width int, height int) Model {
 		width:  width,
 		height: height,
 		nodes:  nodes,
+
+		showHelp: true,
+		Help:     help.New(),
 	}
 }
 
@@ -69,6 +81,11 @@ type KeyMap struct {
 	SectionUp   key.Binding
 	Down        key.Binding
 	Up          key.Binding
+	Quit        key.Binding
+
+	ShowFullHelp  key.Binding
+	CloseFullHelp key.Binding
+
 }
 
 // DefaultKeyMap is the default key bindings for the table.
@@ -97,6 +114,20 @@ func DefaultKeyMap() KeyMap {
 		Up: key.NewBinding(
 			key.WithKeys("up"),
 			key.WithHelp("↑", "up"),
+		),
+
+		ShowFullHelp: key.NewBinding(
+			key.WithKeys("?"),
+			key.WithHelp("?", "more"),
+		),
+		CloseFullHelp: key.NewBinding(
+			key.WithKeys("?"),
+			key.WithHelp("?", "close help"),
+		),
+
+		Quit: key.NewBinding(
+			key.WithKeys("q", "esc"),
+			key.WithHelp("q", "quit"),
 		),
 	}
 }
@@ -146,6 +177,10 @@ func (m Model) isCursorAtBottom() bool {
 	return m.cursor == len(m.nodes)-1
 }
 
+func (m *Model) setShowHelp() bool {
+	return m.showHelp
+}
+
 func (m *Model) navUp() {
 	if m.isCursorAtRoot() {
 		return
@@ -160,41 +195,57 @@ func (m *Model) navDown() {
 	m.cursor++
 }
 
-func (m *Model) navTop() {
-	m.cursor = 0
-}
+// func (m *Model) navTop() {
+// 	m.cursor = 0
+// }
 
-func (m *Model) navBottom() {
-	m.cursor = len(m.nodes) - 1
-}
+// func (m *Model) navBottom() {
+// 	m.cursor = len(m.nodes) - 1
+// }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, m.KeyMap.Up):
+			fmt.Println(msg)
 			m.navUp()
 		case key.Matches(msg, m.KeyMap.Down):
+			fmt.Println(msg)
 			m.navDown()
-		case key.Matches(msg, m.KeyMap.Top):
-			m.navTop()
-		case key.Matches(msg, m.KeyMap.Bottom):
-			m.navBottom()
+			// case key.Matches(msg, m.KeyMap.Top):
+			// 	m.navTop()
+			// case key.Matches(msg, m.KeyMap.Bottom):
+			// 	m.navBottom()
+		case key.Matches(msg, m.KeyMap.ShowFullHelp):
+			fallthrough
+		case key.Matches(msg, m.KeyMap.CloseFullHelp):
+			m.Help.ShowAll = !m.Help.ShowAll
 		}
 	}
 
-	return m, nil
+	return m, tea.Batch(cmds...)
 }
 
 func (m Model) View() string {
+	availableHeight := m.height
+	var b strings.Builder
+
+
 	nodes := m.Nodes()
 
-	var b strings.Builder
+	var help string
+	if m.showHelp {
+		help = m.helpView()
+		availableHeight -= lipgloss.Height(help)
+	}
+
+	b.WriteString(lipgloss.NewStyle().Height(availableHeight).Render(m.renderTree(&b, m.nodes, 0)))
+	b.WriteString(help)
 
 	if len(nodes) == 0 {
 		return "No data"
-	} else {
-		m.renderTree(&b, m.nodes, 0)
 	}
 	return b.String()
 }
@@ -222,4 +273,37 @@ func (m *Model) renderTree(b *strings.Builder, remainingNodes []Node, indent int
 
 	}
 	return b.String()
+}
+
+func (m Model) helpView() string {
+	return m.Styles.Help.Render(m.Help.View(m))
+}
+
+func (m Model) ShortHelp() []key.Binding {
+	kb := []key.Binding{
+		m.KeyMap.Up,
+		m.KeyMap.Down,
+	}
+
+	if m.AdditionalShortHelpKeys != nil {
+		kb = append(kb, m.AdditionalShortHelpKeys()...)
+	}
+
+	return append(kb,
+		m.KeyMap.Quit,
+	)
+}
+
+func (m Model) FullHelp() [][]key.Binding {
+	kb := [][]key.Binding{{
+		m.KeyMap.Up,
+		m.KeyMap.Down,
+	}}
+
+
+	return append(kb,
+		[]key.Binding{
+			m.KeyMap.Quit,
+			m.KeyMap.CloseFullHelp,
+		})
 }
