@@ -20,21 +20,17 @@ const (
 
 type Styles struct {
 	Shapes     lipgloss.Style
-	RootValue  lipgloss.Style
-	RootDesc   lipgloss.Style
-	ChildValue lipgloss.Style
-	ChildDesc  lipgloss.Style
-	Help  lipgloss.Style
+	Selected   lipgloss.Style
+	Unselected lipgloss.Style
+	Help       lipgloss.Style
 }
 
 func defaultStyles() Styles {
 	return Styles{
 		Shapes:     lipgloss.NewStyle().Margin(0, 0, 0, 0).Foreground(purple),
-		RootValue:  lipgloss.NewStyle().Margin(0, 0, 0, 0).Background(purple),
-		RootDesc:   lipgloss.NewStyle().Margin(0, 0, 0, 0).Foreground(purple),
-		ChildDesc:  lipgloss.NewStyle().Margin(0, 0, 0, 0).Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#ffffff"}),
-		ChildValue: lipgloss.NewStyle().Margin(0, 0, 0, 0).Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#ffffff"}),
-		Help: 	 lipgloss.NewStyle().Margin(0, 0, 0, 0).Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#ffffff"}),
+		Selected:   lipgloss.NewStyle().Margin(0, 0, 0, 0).Background(purple),
+		Unselected: lipgloss.NewStyle().Margin(0, 0, 0, 0).Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#ffffff"}),
+		Help:       lipgloss.NewStyle().Margin(0, 0, 0, 0).Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#ffffff"}),
 	}
 }
 
@@ -85,7 +81,6 @@ type KeyMap struct {
 
 	ShowFullHelp  key.Binding
 	CloseFullHelp key.Binding
-
 }
 
 // DefaultKeyMap is the default key bindings for the table.
@@ -140,6 +135,25 @@ func (m *Model) SetNodes(nodes []Node) {
 	m.nodes = nodes
 }
 
+func (m *Model) NumberOfNodes() int {
+	count := 0
+
+	var countNodes func([]Node)
+	countNodes = func(nodes []Node) {
+		for _, node := range nodes {
+			count++
+			if node.Children != nil {
+				countNodes(node.Children)
+			}
+		}
+	}
+
+	countNodes(m.nodes)
+
+	return count
+
+}
+
 func (m Model) Width() int {
 	return m.width
 }
@@ -177,47 +191,37 @@ func (m Model) isCursorAtBottom() bool {
 	return m.cursor == len(m.nodes)-1
 }
 
-func (m *Model) setShowHelp() bool {
+func (m *Model) SetShowHelp() bool {
 	return m.showHelp
 }
 
-func (m *Model) navUp() {
-	if m.isCursorAtRoot() {
-		return
-	}
+func (m *Model) NavUp() {
 	m.cursor--
-}
 
-func (m *Model) navDown() {
-	if m.isCursorAtBottom() {
+	if m.cursor < 0 {
+		m.cursor = 0
 		return
 	}
-	m.cursor++
+
 }
 
-// func (m *Model) navTop() {
-// 	m.cursor = 0
-// }
-
-// func (m *Model) navBottom() {
-// 	m.cursor = len(m.nodes) - 1
-// }
+func (m *Model) NavDown() {
+	m.cursor++
+	if m.cursor >= m.NumberOfNodes() {
+		m.cursor = m.NumberOfNodes() - 1
+		return
+	}
+	
+}
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
-	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, m.KeyMap.Up):
-			fmt.Println(msg)
-			m.navUp()
+			m.NavUp()
 		case key.Matches(msg, m.KeyMap.Down):
-			fmt.Println(msg)
-			m.navDown()
-			// case key.Matches(msg, m.KeyMap.Top):
-			// 	m.navTop()
-			// case key.Matches(msg, m.KeyMap.Bottom):
-			// 	m.navBottom()
+			m.NavDown()
 		case key.Matches(msg, m.KeyMap.ShowFullHelp):
 			fallthrough
 		case key.Matches(msg, m.KeyMap.CloseFullHelp):
@@ -225,13 +229,12 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		}
 	}
 
-	return m, tea.Batch(cmds...)
+	return m, nil
 }
 
 func (m Model) View() string {
 	availableHeight := m.height
 	var b strings.Builder
-
 
 	nodes := m.Nodes()
 
@@ -241,7 +244,7 @@ func (m Model) View() string {
 		availableHeight -= lipgloss.Height(help)
 	}
 
-	b.WriteString(lipgloss.NewStyle().Height(availableHeight).Render(m.renderTree(&b, m.nodes, 0)))
+	b.WriteString(lipgloss.NewStyle().Height(availableHeight).Render(m.renderTree(m.nodes, 0)))
 	b.WriteString(help)
 
 	if len(nodes) == 0 {
@@ -250,33 +253,39 @@ func (m Model) View() string {
 	return b.String()
 }
 
-func (m *Model) renderTree(b *strings.Builder, remainingNodes []Node, indent int) string {
-	// Root Value - Root Description
-	// 	└── Child Value - Child Description
-	// 	└── Child Value - Child Description
-	//  └── Child Value -  Child Description
-	// 		└── Child Value - Child Description
-	// 		└── Child Value - Child Description
+func (m *Model) renderTree(remainingNodes []Node, indent int) string {
+	var b strings.Builder
 
-	for _, node := range remainingNodes {
+	for idx, node := range remainingNodes {
 
-		if indent == 0 {
-			str := m.Styles.RootValue.Render(node.Value) + "\t\t" + m.Styles.RootDesc.Render(node.Desc) + "\n"
-			b.WriteString(str)
+		var str string
+
+		// If we aren't at the root, we add the arrow shape to the string
+		if idx != 0 {
+			shape := strings.Repeat(" ", indent*2) + m.Styles.Shapes.Render(bottomLeft)
+			str += shape
 		}
-		if node.Children != nil {
-			m.renderTree(b, node.Children, indent+1)
+
+		// If we are at the cursor, we add the selected style to the string
+		if m.cursor == idx {
+				str += fmt.Sprintf("%s\t\t%s\n", m.Styles.Selected.Render(node.Value), m.Styles.Selected.Render(node.Desc))
 		} else {
-			str := strings.Repeat(" ", indent*2) + m.Styles.Shapes.Render(bottomLeft) + m.Styles.ChildValue.Render(node.Value) + "\t\t" + m.Styles.ChildDesc.Render(node.Desc) + "\n"
-			b.WriteString(str)
+				str += fmt.Sprintf("%s\t\t%s\n", m.Styles.Unselected.Render(node.Value), m.Styles.Unselected.Render(node.Desc))
 		}
 
+		b.WriteString(str)
+
+		if node.Children != nil {
+			childStr := m.renderTree(node.Children, indent+1)
+			b.WriteString(childStr)
+		}
 	}
+
 	return b.String()
 }
 
 func (m Model) helpView() string {
-	return m.Styles.Help.Render(m.Help.View(m))
+	return m.Help.View(m)
 }
 
 func (m Model) ShortHelp() []key.Binding {
@@ -300,10 +309,13 @@ func (m Model) FullHelp() [][]key.Binding {
 		m.KeyMap.Down,
 	}}
 
-
 	return append(kb,
 		[]key.Binding{
 			m.KeyMap.Quit,
 			m.KeyMap.CloseFullHelp,
 		})
+}
+
+func (m *Model) updateView() {
+	
 }
