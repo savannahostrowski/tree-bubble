@@ -3,6 +3,7 @@
 
 A TUI tree view for Charm's Bubble Tea framework
 
+![A GIF of a tree view TUI, displaying `history | grep docker` at the root and each term as a child node](tree-bubble.gif)
 
 ## Installation
 
