@@ -183,14 +183,6 @@ func (m *Model) SetCursor(cursor int) {
 	m.cursor = cursor
 }
 
-func (m Model) isCursorAtRoot() bool {
-	return m.cursor == 0
-}
-
-func (m Model) isCursorAtBottom() bool {
-	return m.cursor == len(m.nodes)-1
-}
-
 func (m *Model) SetShowHelp() bool {
 	return m.showHelp
 }
@@ -326,8 +318,4 @@ func (m Model) FullHelp() [][]key.Binding {
 			m.KeyMap.Quit,
 			m.KeyMap.CloseFullHelp,
 		})
-}
-
-func (m *Model) updateView() {
-	
 }
