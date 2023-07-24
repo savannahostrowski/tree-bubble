@@ -207,11 +207,11 @@ func (m *Model) NavUp() {
 
 func (m *Model) NavDown() {
 	m.cursor++
+
 	if m.cursor >= m.NumberOfNodes() {
 		m.cursor = m.NumberOfNodes() - 1
 		return
 	}
-	
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
@@ -244,7 +244,8 @@ func (m Model) View() string {
 		availableHeight -= lipgloss.Height(help)
 	}
 
-	b.WriteString(lipgloss.NewStyle().Height(availableHeight).Render(m.renderTree(m.nodes, 0)))
+	count := 0 // create a variable to hold the count
+	b.WriteString(lipgloss.NewStyle().Height(availableHeight).Render(m.renderTree(m.nodes, 0, &count))) // pass a pointer to the count
 	b.WriteString(help)
 
 	if len(nodes) == 0 {
@@ -253,35 +254,46 @@ func (m Model) View() string {
 	return b.String()
 }
 
-func (m *Model) renderTree(remainingNodes []Node, indent int) string {
-	var b strings.Builder
+func (m *Model) renderTree(remainingNodes []Node, indent int, count *int) string {
+    var b strings.Builder
 
-	for idx, node := range remainingNodes {
+    for _, node := range remainingNodes {
 
-		var str string
+        var str string
 
-		// If we aren't at the root, we add the arrow shape to the string
-		if idx != 0 {
-			shape := strings.Repeat(" ", indent*2) + m.Styles.Shapes.Render(bottomLeft)
-			str += shape
-		}
+        // If we aren't at the root, we add the arrow shape to the string
+        if indent > 0 {
+            shape := strings.Repeat(" ", (indent-1)*2) + m.Styles.Shapes.Render(bottomLeft) + " "
+            str += shape
+        }
 
-		// If we are at the cursor, we add the selected style to the string
-		if m.cursor == idx {
-				str += fmt.Sprintf("%s\t\t%s\n", m.Styles.Selected.Render(node.Value), m.Styles.Selected.Render(node.Desc))
-		} else {
-				str += fmt.Sprintf("%s\t\t%s\n", m.Styles.Unselected.Render(node.Value), m.Styles.Unselected.Render(node.Desc))
-		}
+        // Generate the correct index for the node
+        idx := *count
+        *count++
 
-		b.WriteString(str)
+		   // Format the string with fixed width for the value and description fields
+		   valueWidth := 10
+		   descWidth := 20
+		   valueStr := fmt.Sprintf("%-*s", valueWidth, node.Value)
+		   descStr := fmt.Sprintf("%-*s", descWidth, node.Desc)
 
-		if node.Children != nil {
-			childStr := m.renderTree(node.Children, indent+1)
-			b.WriteString(childStr)
-		}
-	}
+		
+        // If we are at the cursor, we add the selected style to the string
+        if m.cursor == idx {
+                str += fmt.Sprintf("%s\t\t%s\n", m.Styles.Selected.Render(valueStr), m.Styles.Selected.Render(descStr))
+        } else {
+                str += fmt.Sprintf("%s\t\t%s\n", m.Styles.Unselected.Render(valueStr), m.Styles.Unselected.Render(descStr))
+        }
 
-	return b.String()
+        b.WriteString(str)
+
+        if node.Children != nil {
+            childStr := m.renderTree(node.Children, indent+1, count)
+            b.WriteString(childStr)
+        }
+    }
+
+    return b.String()
 }
 
 func (m Model) helpView() string {
