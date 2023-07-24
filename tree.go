@@ -226,7 +226,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 func (m Model) View() string {
 	availableHeight := m.height
-	var b strings.Builder
+	var sections []string
 
 	nodes := m.Nodes()
 
@@ -237,13 +237,12 @@ func (m Model) View() string {
 	}
 
 	count := 0 // create a variable to hold the count
-	b.WriteString(lipgloss.NewStyle().Height(availableHeight).Render(m.renderTree(m.nodes, 0, &count))) // pass a pointer to the count
-	b.WriteString(help)
+	sections = append(sections,lipgloss.NewStyle().Height(availableHeight).Render(m.renderTree(m.nodes, 0, &count)), help) // pass a pointer to the count
 
 	if len(nodes) == 0 {
 		return "No data"
 	}
-	return b.String()
+	return lipgloss.JoinVertical(lipgloss.Left, sections...)
 }
 
 func (m *Model) renderTree(remainingNodes []Node, indent int, count *int) string {
@@ -289,7 +288,7 @@ func (m *Model) renderTree(remainingNodes []Node, indent int, count *int) string
 }
 
 func (m Model) helpView() string {
-	return m.Help.View(m)
+	return m.Styles.Help.Render(m.Help.View(m))
 }
 
 func (m Model) ShortHelp() []key.Binding {
