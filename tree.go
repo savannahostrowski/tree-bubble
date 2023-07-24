@@ -236,8 +236,8 @@ func (m Model) View() string {
 		availableHeight -= lipgloss.Height(help)
 	}
 
-	count := 0 // create a variable to hold the count
-	sections = append(sections,lipgloss.NewStyle().Height(availableHeight).Render(m.renderTree(m.nodes, 0, &count)), help) // pass a pointer to the count
+	count := 0 // This is used to keep track of the index of the node we are on (important because we are using a recursive function)
+	sections = append(sections,lipgloss.NewStyle().Height(availableHeight).Render(m.renderTree(m.nodes, 0, &count)), help) 
 
 	if len(nodes) == 0 {
 		return "No data"
